@@ -1,0 +1,78 @@
+void seguirlinha() {
+  static bool linha_encontrada = false;
+  static bool ultimo_movimento_direita = true; // Descobrir para qual lado da linha preta o sensor saiu
+
+  // Será mesmo necessário ???, talve seja necessário ara incrementar a linha no contador desde o inicio
+  while (!linha_encontrada) {
+    if (digitalRead(infra) == 0) {
+      linha_encontrada = true;
+      contador_linha++;
+      Serial.println(contador_linha);
+    }
+  }
+
+  // Verificar se o sensor está na linha
+  if (digitalRead(infra) == 0) {
+    // Está na linha preta
+    contador_linha++;
+    Serial.println(contador_linha);
+    andarfrentelento();
+  } else {
+    // Saiu da linha, precisa descobrir para qual lado ir
+    parar();
+    bool linha_reencontrada = false;
+
+    // Tentar encontrar a linha girando na direção oposta 
+    if (ultimo_movimento_direita) {
+      giroeixoantihorario();
+    } else {
+      giroeixohorario();
+    }
+
+    for (int i = 0; i < 20; i++) {
+      delay(50);
+      if (digitalRead(infra) == 0) {
+        linha_reencontrada = true;
+        break;
+      }
+    }
+    parar();
+
+    if (!linha_reencontrada) {  //aqui, ele vai tentar girar para outro lado, se nao encontrou a linha 
+      // Tentar encontrar a linha girando na outra direção
+      if (ultimo_movimento_direita) {
+        giroeixohorario();
+      } else {
+        giroeixoantihorario();
+      }
+
+      for (int i = 0; i < 40; i++) {
+        delay(50);
+        if (digitalRead(infra) == 0) {
+          linha_reencontrada = true;
+          break;
+        }
+      }
+      parar();
+    }
+
+    if (linha_reencontrada) {
+      andarfrentelento();
+    } else {
+      // Se a linha foi completamente perdida, procurar novamente 
+      // nao sei seé bem necessario isso, tá meio confuso. Meio que ele vai girar até encontrar a linha, mas tipo, ele só vai girar feito um maluco de um lado pro outro e n vai achar 
+      // nao sei bem se vai ter um caso desses, onde nem mesmo girando pro lado e pro outro ele vai encontrar a linha. Mas se tiver, essa parte vai ficar errada 
+      parar();
+      while (digitalRead(infra) != 0) {
+        giroeixoantihorario();
+        delay(50);
+        parar();
+      }
+      andarfrentelento();
+    }
+
+    // Atualizar o último movimento baseado em qual direção a linha foi reencontrada
+    ultimo_movimento_direita = !ultimo_movimento_direita;
+  }
+  Serial.println(digitalRead(infra));
+}
